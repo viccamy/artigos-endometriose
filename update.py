@@ -1,68 +1,71 @@
 import requests
 
-def fetch_hybrid_articles():
-    url = "https://api.semanticscholar.org/graph/v1/paper/search"
-    params = {
-        "query": "endometriosis review",
-        "limit": 15, # Busca extra para garantir 5 resultados válidos
-        "sort": "citationCount:desc",
-        "fields": "title,year,citationCount,url,abstract,venue,externalIds"
-    }
+def fetch_medical_articles():
+    # Usando a API do Europe PMC (mais estável para GitHub Actions e focada em medicina)
+    url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     
-    # 1. Cabeçalho de identificação para evitar bloqueio da API
-    headers = {
-        "User-Agent": "EndometriosisArticlesBot/1.0 (github.com/viccamy/artigos-endometriose)"
+    # Busca por "endometriosis" limitando a revisões e artigos com texto livre (Open Access)
+    query = 'endometriosis AND (SRC:MED OR SRC:PMC) AND (PUBLICATION_TYPE:"Review") AND (OPEN_ACCESS:"Y")'
+    
+    params = {
+        "query": query,
+        "format": "json",
+        "resultType": "core", # Retorna resumo e metadados completos
+        "pageSize": 5,
+        "sort": "CITED desc" # Ordena por número de citações
     }
     
     try:
+        # Europe PMC não exige User-Agent complexo, mas é boa prática
+        headers = {"User-Agent": "EndometrioseCuradorBot/1.0 (seu_email@email.com)"}
         response = requests.get(url, params=params, headers=headers, timeout=15)
         
         if response.status_code == 200:
             data = response.json()
-            papers = data.get("data", [])
+            papers = data.get("resultList", {}).get("result", [])
+            
             filtered_articles = []
             
             for paper in papers:
-                ext_ids = paper.get("externalIds", {})
-                pmcid = ext_ids.get("PMC")
-                pmid = ext_ids.get("PubMed")
-                doi = ext_ids.get("DOI")
+                # Extraindo dados
+                title = paper.get("title", "Sem título")
+                year = paper.get("pubYear", "N/D")
+                citations = paper.get("citedByCount", 0)
+                venue = paper.get("journalTitle", "PubMed / Periódico Científico")
                 
-                # 2. Priorização de bases oficiais e estáveis
-                if pmid:
-                    link = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
-                elif pmcid:
+                # Resumo (abstract) - as vezes vem com tags HTML, mas removeremos no frontend se necessário
+                abstract = paper.get("abstractText", "Resumo detalhado disponível no artigo completo.")
+                
+                # Montando o link oficial do PubMed Central ou PubMed
+                pmcid = paper.get("pmcid")
+                pmid = paper.get("pmid")
+                
+                if pmcid:
                     link = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/"
-                elif doi:
-                    link = f"https://doi.org/{doi}"
+                elif pmid:
+                    link = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
                 else:
-                    link = paper.get("url", "#")
+                    # Link padrão do Europe PMC
+                    link = f"https://europepmc.org/article/MED/{pmid}" if pmid else "#"
                 
-                # Ignora artigos sem abstract
-                if not paper.get("abstract"):
-                    continue
-
                 filtered_articles.append({
-                    "title": paper.get("title", "Sem título"),
-                    "year": paper.get("year", "N/D"),
-                    "citationCount": paper.get("citationCount", 0),
-                    "venue": paper.get("venue", "PubMed / Periódico Científico"),
+                    "title": title,
+                    "year": year,
+                    "citationCount": citations,
+                    "venue": venue,
                     "url": link,
-                    "abstract": paper.get("abstract")
+                    "abstract": abstract
                 })
                 
-                if len(filtered_articles) == 5:
-                    break
-                    
-            if len(filtered_articles) > 0:
+            if filtered_articles:
                 return filtered_articles
         else:
-            print(f"Falha na API: {response.status_code} - {response.text}")
+            print(f"Falha na API Europe PMC: {response.status_code}")
                 
     except Exception as e:
         print(f"Erro na requisição: {e}")
         
-    # 3. Fallback acionado se a API cair
+    # Lista de segurança padrão caso ocorra falha temporária (fallback)
     return [
         {
             "title": "Endometriosis: pathogenesis, diagnosis and treatment",
@@ -84,6 +87,9 @@ def generate_html(articles):
         link = paper.get("url", "#")
         
         abstract = paper.get("abstract", "")
+        # Remove tags HTML simples caso a API retorne o abstract formatado
+        abstract = abstract.replace("<i>", "").replace("</i>", "").replace("<b>", "").replace("</b>", "")
+        
         if len(abstract) > 200:
             abstract = abstract[:197] + "..."
 
@@ -154,8 +160,8 @@ def generate_html(articles):
     return html_content
 
 if __name__ == "__main__":
-    print("Buscando artigos com método híbrido...")
-    articles = fetch_hybrid_articles()
+    print("Buscando artigos no Europe PMC...")
+    articles = fetch_medical_articles()
     print(f"Total de artigos processados: {len(articles)}")
     
     html = generate_html(articles)
