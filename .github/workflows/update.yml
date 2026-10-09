@@ -1,0 +1,34 @@
+name: Atualizar Artigos Automaticamente
+
+on:
+  schedule:
+    # Roda toda segunda-feira às 08:00 UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch: # Permite rodar manualmente a qualquer momento pelo site do GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  update-site:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar Repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Instalar dependências
+        run: pip install requests
+
+      - name: Executar script de atualização
+        run: python update.py
+
+      - name: Salvar alterações no site
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Atualização automática dos artigos científicos"
+          branch: main
