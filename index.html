@@ -22,70 +22,17 @@
             display: flex;
             justify-content: center;
         }
-        .container {
-            width: 100%;
-            max-width: 680px;
-        }
-        header {
-            margin-bottom: 40px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 20px;
-        }
-        h1 {
-            font-size: 1.75rem;
-            margin: 0 0 10px 0;
-            font-weight: 600;
-        }
-        p.subtitle {
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin: 0;
-            line-height: 1.5;
-        }
-        .article-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 20px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .article-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-        .article-title {
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: var(--text-color);
-            text-decoration: none;
-            display: block;
-            margin-bottom: 8px;
-            line-height: 1.4;
-        }
-        .article-title:hover {
-            color: var(--accent-color);
-        }
-        .meta {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            display: flex;
-            gap: 16px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }
-        .summary {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            line-height: 1.6;
-            margin: 0;
-        }
-        footer {
-            text-align: center;
-            margin-top: 50px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
+        .container { width: 100%; max-width: 680px; }
+        header { margin-bottom: 40px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; }
+        h1 { font-size: 1.75rem; margin: 0 0 10px 0; font-weight: 600; }
+        p.subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0; line-height: 1.5; }
+        .article-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 24px; margin-bottom: 20px; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .article-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .article-title { font-size: 1.15rem; font-weight: 600; color: var(--text-color); text-decoration: none; display: block; margin-bottom: 8px; line-height: 1.4; }
+        .article-title:hover { color: var(--accent-color); }
+        .meta { font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+        .summary { font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin: 0; }
+        footer { text-align: center; margin-top: 50px; font-size: 0.85rem; color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -94,7 +41,6 @@
             <h1>Endometriose: Leituras Essenciais</h1>
             <p class="subtitle">Curadoria automatizada cruzando dados de impacto global com artigos abertos do PubMed Central.</p>
         </header>
-
         <main id="articles-list">
             
         <article class="article-card">
@@ -108,7 +54,6 @@
         </article>
         
         </main>
-
         <footer>
             Atualizado automaticamente via automação inteligente &bull; Foco em evidência científica
         </footer>
