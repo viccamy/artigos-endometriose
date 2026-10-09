@@ -3,7 +3,7 @@ import requests
 def fetch_medical_articles():
     url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     
-    # Pesquisa simplificada para evitar rejeição de sintaxe pela API
+    # Pesquisa simplificada para garantir retorno
     params = {
         "query": "endometriosis review",
         "format": "json",
@@ -34,7 +34,10 @@ def fetch_medical_articles():
                 pmid = paper.get("pmid")
                 doi = paper.get("doi")
                 
-                # Prioridade aos links gratuitos do PubMed Central e PubMed
+                # Definir um identificador para exibir na interface (preferência para DOI)
+                identifier = f"DOI: {doi}" if doi else (f"PMID: {pmid}" if pmid else "ID indisponível")
+                
+                # Definir o melhor link
                 if pmcid:
                     link = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/"
                 elif pmid:
@@ -50,7 +53,8 @@ def fetch_medical_articles():
                     "citationCount": citations,
                     "venue": venue,
                     "url": link,
-                    "abstract": abstract
+                    "abstract": abstract,
+                    "identifier": identifier
                 })
                 
                 if len(filtered_articles) == 5:
@@ -71,7 +75,8 @@ def fetch_medical_articles():
             "citationCount": 1250,
             "venue": "Nature Reviews Endocrinology",
             "url": "https://pubmed.ncbi.nlm.nih.gov/30344339/",
-            "abstract": "A comprehensive review on the pathogenesis, diagnostic challenges, and modern therapeutic approaches for endometriosis."
+            "abstract": "A comprehensive review on the pathogenesis, diagnostic challenges, and modern therapeutic approaches for endometriosis.",
+            "identifier": "DOI: 10.1038/s41574-018-0098-z"
         }
     ]
 
@@ -83,16 +88,18 @@ def generate_html(articles):
         citations = paper.get("citationCount", 0)
         venue = paper.get("venue", "PubMed")
         link = paper.get("url", "#")
+        identifier = paper.get("identifier", "")
         
         abstract = paper.get("abstract", "")
-        # Remoção de tags HTML que a API do Europe PMC ocasionalmente introduz
+        # Remove tags HTML simples caso a API retorne o abstract formatado
         tags = ["<i>", "</i>", "<b>", "</b>", "<p>", "</p>", "<sup>", "</sup>", "<sub>", "</sub>"]
         for tag in tags:
             abstract = abstract.replace(tag, "")
-            
+        
         if len(abstract) > 200:
             abstract = abstract[:197] + "..."
 
+        # O HTML agora inclui o DOI (ou PMID) na tag <div class="meta">
         articles_html += f"""
         <article class="article-card">
             <a href="{link}" class="article-title" target="_blank">{title}</a>
@@ -100,6 +107,7 @@ def generate_html(articles):
                 <span>Ano: {year}</span>
                 <span>Citações: {citations}</span>
                 <span>Fonte: {venue}</span>
+                <span style="color: var(--accent-color); font-weight: 500;">{identifier}</span>
             </div>
             <p class="summary">{abstract}</p>
         </article>
@@ -163,9 +171,4 @@ if __name__ == "__main__":
     print("Buscando artigos no Europe PMC...")
     articles = fetch_medical_articles()
     print(f"Total de artigos processados: {len(articles)}")
-    
-    html = generate_html(articles)
-    
-    with open("index.html", "w", encoding="utf-8") as f:
-        f.write(html)
-    print("Arquivo index.html atualizado com sucesso!")
+    html = generate_
