@@ -3,9 +3,12 @@ import requests
 def fetch_medical_articles():
     url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     
-    # Pesquisa simplificada para garantir retorno
+    # Pesquisa estrita: a palavra 'endometriosis' DEVE estar no título do artigo
+    # e deve ser do tipo revisão.
+    query_str = 'TITLE:"endometriosis" AND (PUBLICATION_TYPE:"Review")'
+    
     params = {
-        "query": "endometriosis review",
+        "query": query_str,
         "format": "json",
         "resultType": "core",
         "pageSize": 15,
@@ -34,10 +37,8 @@ def fetch_medical_articles():
                 pmid = paper.get("pmid")
                 doi = paper.get("doi")
                 
-                # Definir um identificador para exibir na interface (preferência para DOI)
                 identifier = f"DOI: {doi}" if doi else (f"PMID: {pmid}" if pmid else "ID indisponível")
                 
-                # Definir o melhor link
                 if pmcid:
                     link = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/"
                 elif pmid:
@@ -91,7 +92,6 @@ def generate_html(articles):
         identifier = paper.get("identifier", "")
         
         abstract = paper.get("abstract", "")
-        # Remove tags HTML simples caso a API retorne o abstract formatado
         tags = ["<i>", "</i>", "<b>", "</b>", "<p>", "</p>", "<sup>", "</sup>", "<sub>", "</sub>"]
         for tag in tags:
             abstract = abstract.replace(tag, "")
@@ -99,7 +99,6 @@ def generate_html(articles):
         if len(abstract) > 200:
             abstract = abstract[:197] + "..."
 
-        # O HTML agora inclui o DOI (ou PMID) na tag <div class="meta">
         articles_html += f"""
         <article class="article-card">
             <a href="{link}" class="article-title" target="_blank">{title}</a>
