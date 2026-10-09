@@ -1,23 +1,20 @@
 import requests
 
 def fetch_medical_articles():
-    # Usando a API do Europe PMC (mais estável para GitHub Actions e focada em medicina)
     url = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
     
-    # Busca por "endometriosis" limitando a revisões e artigos com texto livre (Open Access)
-    query = 'endometriosis AND (SRC:MED OR SRC:PMC) AND (PUBLICATION_TYPE:"Review") AND (OPEN_ACCESS:"Y")'
-    
+    # Pesquisa simplificada para evitar rejeição de sintaxe pela API
     params = {
-        "query": query,
+        "query": "endometriosis review",
         "format": "json",
-        "resultType": "core", # Retorna resumo e metadados completos
-        "pageSize": 5,
-        "sort": "CITED desc" # Ordena por número de citações
+        "resultType": "core",
+        "pageSize": 15,
+        "sort": "CITED desc"
     }
     
+    headers = {"User-Agent": "EndometrioseCuradorBot/1.0"}
+    
     try:
-        # Europe PMC não exige User-Agent complexo, mas é boa prática
-        headers = {"User-Agent": "EndometrioseCuradorBot/1.0 (seu_email@email.com)"}
         response = requests.get(url, params=params, headers=headers, timeout=15)
         
         if response.status_code == 200:
@@ -27,25 +24,24 @@ def fetch_medical_articles():
             filtered_articles = []
             
             for paper in papers:
-                # Extraindo dados
                 title = paper.get("title", "Sem título")
                 year = paper.get("pubYear", "N/D")
                 citations = paper.get("citedByCount", 0)
-                venue = paper.get("journalTitle", "PubMed / Periódico Científico")
-                
-                # Resumo (abstract) - as vezes vem com tags HTML, mas removeremos no frontend se necessário
+                venue = paper.get("journalTitle", "PubMed / Europe PMC")
                 abstract = paper.get("abstractText", "Resumo detalhado disponível no artigo completo.")
                 
-                # Montando o link oficial do PubMed Central ou PubMed
                 pmcid = paper.get("pmcid")
                 pmid = paper.get("pmid")
+                doi = paper.get("doi")
                 
+                # Prioridade aos links gratuitos do PubMed Central e PubMed
                 if pmcid:
                     link = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/"
                 elif pmid:
                     link = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+                elif doi:
+                    link = f"https://doi.org/{doi}"
                 else:
-                    # Link padrão do Europe PMC
                     link = f"https://europepmc.org/article/MED/{pmid}" if pmid else "#"
                 
                 filtered_articles.append({
@@ -57,15 +53,17 @@ def fetch_medical_articles():
                     "abstract": abstract
                 })
                 
+                if len(filtered_articles) == 5:
+                    break
+                    
             if filtered_articles:
                 return filtered_articles
         else:
-            print(f"Falha na API Europe PMC: {response.status_code}")
+            print(f"Erro na API Europe PMC: {response.status_code}")
                 
     except Exception as e:
         print(f"Erro na requisição: {e}")
         
-    # Lista de segurança padrão caso ocorra falha temporária (fallback)
     return [
         {
             "title": "Endometriosis: pathogenesis, diagnosis and treatment",
@@ -87,9 +85,11 @@ def generate_html(articles):
         link = paper.get("url", "#")
         
         abstract = paper.get("abstract", "")
-        # Remove tags HTML simples caso a API retorne o abstract formatado
-        abstract = abstract.replace("<i>", "").replace("</i>", "").replace("<b>", "").replace("</b>", "")
-        
+        # Remoção de tags HTML que a API do Europe PMC ocasionalmente introduz
+        tags = ["<i>", "</i>", "<b>", "</b>", "<p>", "</p>", "<sup>", "</sup>", "<sub>", "</sub>"]
+        for tag in tags:
+            abstract = abstract.replace(tag, "")
+            
         if len(abstract) > 200:
             abstract = abstract[:197] + "..."
 
