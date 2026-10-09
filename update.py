@@ -1,60 +1,68 @@
 import requests
 
 def fetch_hybrid_articles():
-    # Usamos a API do Semantic Scholar para buscar ordenando por citação (mais influentes)
     url = "https://api.semanticscholar.org/graph/v1/paper/search"
     params = {
         "query": "endometriosis review",
-        "limit": 10,  # Buscamos 10 para filtrar os que são de acesso aberto
+        "limit": 15, # Busca extra para garantir 5 resultados válidos
         "sort": "citationCount:desc",
-        "fields": "title,year,citationCount,url,abstract,openAccessPdf,venue,externalIds"
+        "fields": "title,year,citationCount,url,abstract,venue,externalIds"
+    }
+    
+    # 1. Cabeçalho de identificação para evitar bloqueio da API
+    headers = {
+        "User-Agent": "EndometriosisArticlesBot/1.0 (github.com/viccamy/artigos-endometriose)"
     }
     
     try:
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(url, params=params, headers=headers, timeout=15)
+        
         if response.status_code == 200:
             data = response.json()
             papers = data.get("data", [])
-            
             filtered_articles = []
+            
             for paper in papers:
-                # Prioriza artigos que possuem PDF gratuito aberto ou que possuem ID do PubMed (PMC/PMID)
-                oa_pdf = paper.get("openAccessPdf")
                 ext_ids = paper.get("externalIds", {})
                 pmcid = ext_ids.get("PMC")
                 pmid = ext_ids.get("PubMed")
+                doi = ext_ids.get("DOI")
                 
-                # Define o melhor link gratuito disponível
-                if oa_pdf and oa_pdf.get("url"):
-                    link = oa_pdf.get("url")
+                # 2. Priorização de bases oficiais e estáveis
+                if pmid:
+                    link = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
                 elif pmcid:
                     link = f"https://www.ncbi.nlm.nih.gov/pmc/articles/{pmcid}/"
-                elif pmid:
-                    link = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+                elif doi:
+                    link = f"https://doi.org/{doi}"
                 else:
                     link = paper.get("url", "#")
                 
-                # Adiciona à lista final
+                # Ignora artigos sem abstract
+                if not paper.get("abstract"):
+                    continue
+
                 filtered_articles.append({
                     "title": paper.get("title", "Sem título"),
                     "year": paper.get("year", "N/D"),
                     "citationCount": paper.get("citationCount", 0),
                     "venue": paper.get("venue", "PubMed / Periódico Científico"),
                     "url": link,
-                    "abstract": paper.get("abstract") or "Resumo detalhado disponível no artigo completo."
+                    "abstract": paper.get("abstract")
                 })
                 
-                # Queremos exatamente os 5 melhores
                 if len(filtered_articles) == 5:
                     break
                     
-            if filtered_articles:
+            if len(filtered_articles) > 0:
                 return filtered_articles
+        else:
+            print(f"Falha na API: {response.status_code} - {response.text}")
                 
     except Exception as e:
-        print(f"Erro na busca híbrida: {e}")
+        print(f"Erro na requisição: {e}")
         
-    # Lista de segurança padrão caso ocorra falha temporária
+    # 3. Fallback acionado se a API cair
     return [
         {
             "title": "Endometriosis: pathogenesis, diagnosis and treatment",
@@ -115,70 +123,17 @@ def generate_html(articles):
             display: flex;
             justify-content: center;
         }}
-        .container {{
-            width: 100%;
-            max-width: 680px;
-        }}
-        header {{
-            margin-bottom: 40px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 20px;
-        }}
-        h1 {{
-            font-size: 1.75rem;
-            margin: 0 0 10px 0;
-            font-weight: 600;
-        }}
-        p.subtitle {{
-            color: var(--text-muted);
-            font-size: 0.95rem;
-            margin: 0;
-            line-height: 1.5;
-        }}
-        .article-card {{
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 20px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }}
-        .article-card:hover {{
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }}
-        .article-title {{
-            font-size: 1.15rem;
-            font-weight: 600;
-            color: var(--text-color);
-            text-decoration: none;
-            display: block;
-            margin-bottom: 8px;
-            line-height: 1.4;
-        }}
-        .article-title:hover {{
-            color: var(--accent-color);
-        }}
-        .meta {{
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            display: flex;
-            gap: 16px;
-            margin-bottom: 12px;
-            flex-wrap: wrap;
-        }}
-        .summary {{
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            line-height: 1.6;
-            margin: 0;
-        }}
-        footer {{
-            text-align: center;
-            margin-top: 50px;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }}
+        .container {{ width: 100%; max-width: 680px; }}
+        header {{ margin-bottom: 40px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; }}
+        h1 {{ font-size: 1.75rem; margin: 0 0 10px 0; font-weight: 600; }}
+        p.subtitle {{ color: var(--text-muted); font-size: 0.95rem; margin: 0; line-height: 1.5; }}
+        .article-card {{ background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 24px; margin-bottom: 20px; transition: transform 0.2s ease, box-shadow 0.2s ease; }}
+        .article-card:hover {{ transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }}
+        .article-title {{ font-size: 1.15rem; font-weight: 600; color: var(--text-color); text-decoration: none; display: block; margin-bottom: 8px; line-height: 1.4; }}
+        .article-title:hover {{ color: var(--accent-color); }}
+        .meta {{ font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }}
+        .summary {{ font-size: 0.95rem; color: var(--text-muted); line-height: 1.6; margin: 0; }}
+        footer {{ text-align: center; margin-top: 50px; font-size: 0.85rem; color: var(--text-muted); }}
     </style>
 </head>
 <body>
@@ -187,18 +142,15 @@ def generate_html(articles):
             <h1>Endometriose: Leituras Essenciais</h1>
             <p class="subtitle">Curadoria automatizada cruzando dados de impacto global com artigos abertos do PubMed Central.</p>
         </header>
-
         <main id="articles-list">
             {articles_html}
         </main>
-
         <footer>
             Atualizado automaticamente via automação inteligente &bull; Foco em evidência científica
         </footer>
     </div>
 </body>
-</html>
-"""
+</html>"""
     return html_content
 
 if __name__ == "__main__":
