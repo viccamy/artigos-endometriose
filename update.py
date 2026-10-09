@@ -171,4 +171,9 @@ if __name__ == "__main__":
     print("Buscando artigos no Europe PMC...")
     articles = fetch_medical_articles()
     print(f"Total de artigos processados: {len(articles)}")
-    html = generate_
+    
+    html = generate_html(articles)
+    
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html)
+    print("Arquivo index.html atualizado com sucesso!")
